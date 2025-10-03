@@ -169,34 +169,40 @@ uint64_t* keccak_p_1600_24(uint64_t* S) {
   return S;
 }
 
-char* pad(char* N, int x, int m) {
+uint8_t* pad(uint8_t* N, int x, int m) {
   int j = mod(-m - 2, x);
 
-  char* P = calloc(m + j + 2, 1);
+  const int n_len = m / 8 + 1;
+  const int p_len = (m + j + 2) / 8;
 
-  memcpy(P, N, m);
+  uint8_t* P = calloc(p_len, 1);
 
-  P[m] = 1;
-  P[m + j + 1] = 1;
+  memcpy(P, N, n_len);
+
+  const int lz = __builtin_clz(P[n_len - 1]) - 24;
+  if(lz != 6) P[n_len]     |= 1;
+  else        P[n_len - 1] |= 0b100;
+
+  P[p_len - 1] |= 0b10000000;
 
   return P;
 }
 
-uint64_t* sponge(int r, char* N, int n_len, uint64_t d) {
-  char* P = pad(N, r, n_len);
-  int j = mod(-n_len - 2, r);
-  int n = (n_len + j + 2) / r;
-  // int c = b - r;
+uint64_t* sponge(int r, uint8_t* N, int n_len, uint64_t d) {
+  const int bit_len = n_len * 8 - 6;
+  uint8_t* P = pad(N, r, bit_len);
+  const int j = mod(-bit_len - 2, r);
+  const int n = (bit_len + j + 2) / r;
 
   uint64_t* S = calloc(25, sizeof(uint64_t));
 
   for(int i = 0; i < n; i++) {
     int p_idx = 0;
     for(int j = 0; j < r / 64; j++) {
-      for(int k = 0; k < 64; k++) {
-        S[j] ^= (uint64_t) P[p_idx + k] << k;
+      for(int k = 0; k < 8; k++) {
+        S[j] ^= ((uint64_t) P[p_idx + k]) << (8 * k);
       }
-      p_idx += 64;
+      p_idx += 8;
     }
     S = keccak_p_1600_24(S);
   }
@@ -223,25 +229,14 @@ uint64_t* sponge(int r, char* N, int n_len, uint64_t d) {
   }
 }
 
-uint64_t* sha_3(int d, char* M) {
-  int c = 2 * d;
-  int m_len = strlen(M);
-  char* N = malloc(m_len * 8 + 2);
+uint64_t* sha_3(int d, char* M, int m_len) {
+  const int c = 2 * d;
+  uint8_t* N = calloc(m_len + 1, 1);
 
-  for(int i = 0; i < m_len; i++) {
-    N[i * 8 + 7] = M[i] >> 7;
-    N[i * 8 + 6] = M[i] >> 6 & 1;
-    N[i * 8 + 5] = M[i] >> 5 & 1;
-    N[i * 8 + 4] = M[i] >> 4 & 1;
-    N[i * 8 + 3] = M[i] >> 3 & 1;
-    N[i * 8 + 2] = M[i] >> 2 & 1;
-    N[i * 8 + 1] = M[i] >> 1 & 1;
-    N[i * 8]     = M[i] >> 0 & 1;
-  }
-  N[m_len * 8] = 0;
-  N[m_len * 8 + 1] = 1;
+  memcpy(N, M, m_len);
+  N[m_len] = 0b10;
 
-  uint64_t* r = sponge(b - c, N, m_len * 8 + 2, d);
+  uint64_t* r = sponge(b - c, N, m_len + 1, d);
   free(N);
   return r;
 }
@@ -249,7 +244,7 @@ uint64_t* sha_3(int d, char* M) {
 int main() {
   char* M = "hello, world";
 
-  uint64_t* r = sha_3(256, M);
+  uint64_t* r = sha_3(256, M, 12);
 
   for(int i = 0; i < 256 / 64; i++) {
     printf("%lx", r[i]);
