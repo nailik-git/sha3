@@ -9,27 +9,25 @@
 #define l 6
 #define n_r 24
 
-#define Lane(i, j) A[i][j]
-
-int mod(int num, int div) {
+static inline int mod(int num, int div) {
   int r = num % div;
   while(r < 0) r += div;
 
   return r;
 }
 
-void A_from_string(uint64_t* S, uint64_t** A) {
-  for(int y = 0; y < 5; y++) {
-    for(int x = 0; x < 5; x++) {
-      A[x][y] = S[5 * y + x];
+static inline void A_from_string(uint64_t* S, uint64_t A[5][5]) {
+  for(int j = 0; j < 5; j++) {
+    for(int i = 0; i < 5; i++) {
+      A[i][j] = S[5 * j + i];
     }
   }
 }
 
-void string_from_A(uint64_t** A, uint64_t* S) {
+static inline void string_from_A(uint64_t A[5][5], uint64_t* S) {
   for(int j = 0; j < 5; j++) {
     for(int i = 0; i < 5; i++) {
-      S[5 * j + i] = Lane(i, j);
+      S[5 * j + i] = A[i][j];
     }
   }
 }
@@ -38,8 +36,8 @@ void string_from_A(uint64_t** A, uint64_t* S) {
 
 #define D(x) (C(mod(x - 1, 5)) ^ __builtin_rotateleft64(C((x + 1) % 5), 1))
 
-uint64_t** theta(uint64_t** A) {
-  uint64_t _A[5][5] = {0};
+static inline void* theta(uint64_t A[5][5]) {
+  static uint64_t _A[5][5] = {0};
 
   for(int x = 0; x < 5; x++) {
     for(int y = 0; y < 5; y++) {
@@ -56,8 +54,8 @@ uint64_t** theta(uint64_t** A) {
   return A;
 }
 
-uint64_t** rho(uint64_t** A) {
-  uint64_t _A[5][5] = {0};
+static inline void* rho(uint64_t A[5][5]) {
+  static uint64_t _A[5][5] = {0};
 
   _A[0][0] = A[0][0];
   int x = 1;
@@ -79,8 +77,8 @@ uint64_t** rho(uint64_t** A) {
   return A;
 }
 
-uint64_t** pi(uint64_t** A) {
-  uint64_t _A[5][5] = {0};
+static inline void* pi(uint64_t A[5][5]) {
+  static uint64_t _A[5][5] = {0};
 
   for(int x = 0; x < 5; x++) {
     for(int y = 0; y < 5; y ++) {
@@ -97,8 +95,8 @@ uint64_t** pi(uint64_t** A) {
   return A;
 }
 
-uint64_t** chi(uint64_t** A) {
-  uint64_t _A[5][5] = {0};
+static inline void* chi(uint64_t A[5][5]) {
+  static uint64_t _A[5][5] = {0};
 
   for(int x = 0; x < 5; x++) {
     for(int y = 0; y < 5; y ++) {
@@ -115,7 +113,7 @@ uint64_t** chi(uint64_t** A) {
   return A;
 }
 
-uint64_t rc(uint64_t t) {
+static inline uint64_t rc(uint64_t t) {
   uint64_t R = 1;
   const uint64_t bitmask = 1 << 8;
 
@@ -130,7 +128,7 @@ uint64_t rc(uint64_t t) {
   return R & 1;
 }
 
-uint64_t** iota(uint64_t** A, int i_r) {
+static inline void* iota(uint64_t A[5][5], int i_r) {
   uint64_t RC = 0;
 
   for(int j = 0; j <= l; j++) {
@@ -146,32 +144,20 @@ uint64_t** iota(uint64_t** A, int i_r) {
 
 #define Rnd(A, i_r) iota(chi(pi(rho(theta(A)))), i_r)
 
-uint64_t* keccak_p_1600_24(uint64_t* S) {
-  uint64_t** A = malloc(sizeof(uint64_t*) * 5);
-  for(int i = 0; i < 5; i++) {
-    A[i] = malloc(sizeof(uint64_t) * 5);
-  }
+void keccak_p_1600_24(uint64_t* S) {
+  uint64_t A[5][5] = {0};
 
   A_from_string(S, A);
 
-
   for(int i = 12 + 2 * l - n_r; i < (12 + 2 * l); i++) {
-    A = Rnd(A, i);
+    Rnd(A, i);
   }
 
   string_from_A(A, S);
-
-  for(int i = 0; i < 5; i++) {
-    free(A[i]);
-  }
-  free(A);
-
-  return S;
 }
 
-uint8_t* pad(uint8_t* N, int x, int m) {
-  int j = mod(-m - 2, x);
-
+static inline uint8_t* pad(uint8_t* N, int x, int m) {
+  const int j = mod(-m - 2, x);
   const int n_len = m / 8 + 1;
   const int p_len = (m + j + 2) / 8;
 
@@ -179,9 +165,9 @@ uint8_t* pad(uint8_t* N, int x, int m) {
 
   memcpy(P, N, n_len);
 
-  const int lz = __builtin_clz(P[n_len - 1]) - 24;
+  /* const int lz = __builtin_clz(P[n_len - 1]) - 24; // unneccessary check
   if(lz != 6) P[n_len]     |= 1;
-  else        P[n_len - 1] |= 0b100;
+  else      */P[n_len - 1] |= 0b100;
 
   P[p_len - 1] |= 0b10000000;
 
@@ -194,7 +180,7 @@ uint64_t* sponge(int r, uint8_t* N, int n_len, uint64_t d) {
   const int j = mod(-bit_len - 2, r);
   const int n = (bit_len + j + 2) / r;
 
-  uint64_t* S = calloc(25, sizeof(uint64_t));
+  uint64_t S[25] = {0};
 
   for(int i = 0; i < n; i++) {
     int p_idx = 0;
@@ -204,7 +190,7 @@ uint64_t* sponge(int r, uint8_t* N, int n_len, uint64_t d) {
       }
       p_idx += 8;
     }
-    S = keccak_p_1600_24(S);
+    keccak_p_1600_24(S);
   }
 
   free(P);
@@ -220,24 +206,22 @@ uint64_t* sponge(int r, uint8_t* N, int n_len, uint64_t d) {
     }
     z_idx += i;
 
-    if(d / 64 >= z_idx) {
-      free(S);
+    if(d / 64 <= z_idx) {
       return Z;
     }
 
-    S = keccak_p_1600_24(S);
+    keccak_p_1600_24(S);
   }
 }
 
 uint64_t* sha_3(int d, char* M, int m_len) {
   const int c = 2 * d;
-  uint8_t* N = calloc(m_len + 1, 1);
+  uint8_t N[m_len + 1];
 
   memcpy(N, M, m_len);
   N[m_len] = 0b10;
 
   uint64_t* r = sponge(b - c, N, m_len + 1, d);
-  free(N);
   return r;
 }
 
