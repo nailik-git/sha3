@@ -250,7 +250,7 @@ void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
     __sha3_sponge(*sha3, r);
 
     // keep rest
-    memcpy(sha3->buf->items, sha3->buf->items + r, (sha3->buf->count -= r));
+    memcpy(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
   }
 }
 
