@@ -223,20 +223,14 @@ void sha3_deinit(sha3* sha3) {
 }
 
 void __sha3_sponge(sha3 sha3, const int r) {
-  const int bit_len = sha3.buf->count * 8 - 6;
-  const int j = __sha3_mod(-bit_len - 2, r);
-  const int n = (bit_len + j + 2) / r;
-
-  for(int i = 0; i < n; i++) {
-    int p_idx = 0;
-    for(int j = 0; j < r / 64; j++) {
-      for(int k = 0; k < 8; k++) {
-        sha3.S[j] ^= ((uint64_t) sha3.buf->items[p_idx + k]) << (8 * k);
-      }
-      p_idx += 8;
+  int p_idx = 0;
+  for(int j = 0; j < r / 64; j++) {
+    for(int k = 0; k < 8; k++) {
+      sha3.S[j] ^= ((uint64_t) sha3.buf->items[p_idx + k]) << (8 * k);
     }
-    __sha3_keccak(sha3.S);
+    p_idx += 8;
   }
+  __sha3_keccak(sha3.S);
 }
 
 void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
@@ -284,17 +278,21 @@ void __sha3_squeeze(sha3 sha3, const int r) {
   }
 }
 
-const uint64_t* sha3_squeeze(sha3 sha3) {
-  const int c = 2 * sha3.d;
+const uint64_t* sha3_squeeze(sha3* sha3) {
+  const int c = 2 * sha3->d;
   const int r = SHA3_B - c;
 
-  __sha3_append(sha3.buf, 0b110);
+  __sha3_append(sha3->buf, 0b110);
 
-  __sha3_pad(sha3.buf, r);
+  __sha3_pad(sha3->buf, r);
 
-  __sha3_sponge(sha3, r);
+  while(sha3->buf->count >= r / 8) {
+    __sha3_sponge(*sha3, r);
 
-  __sha3_squeeze(sha3, r);
+    memcpy(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
+  }
 
-  return sha3.hash;
+  __sha3_squeeze(*sha3, r);
+
+  return sha3->hash;
 }

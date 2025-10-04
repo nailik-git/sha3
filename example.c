@@ -18,7 +18,7 @@ int main() {
   sha3_sponge(&sha3, m1, strlen(m1));
   sha3_sponge(&sha3, m2, strlen(m2));
 
-  const uint64_t* hash = sha3_squeeze(sha3);
+  const uint64_t* hash = sha3_squeeze(&sha3);
 
   for(int i = 0; i < HASH_SIZE / 8; i++) {
     printf("%02x", ((uint8_t*)hash)[i]);

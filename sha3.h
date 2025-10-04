@@ -25,6 +25,6 @@ void sha3_init_512(sha3* sha3);
 void sha3_deinit(sha3* sha3);
 
 void sha3_sponge(sha3* sha3, const void* M, const size_t size);
-const uint64_t* sha3_squeeze(sha3 sha3);
+const uint64_t* sha3_squeeze(sha3* sha3);
 
 #endif
