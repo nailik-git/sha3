@@ -184,17 +184,14 @@ void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
   const int c = 2 * sha3->d;
   const int r = SHA3_B - c;
 
-  // append to global thingy thing
   __sha3_append_buf(sha3->buf, M, size);
 
-  // if long enough, perform sponging
   int i;
   for(i = 0; (i + 1) * r / 8 <= sha3->buf->count; i++) {
     __sha3_sponge(*sha3, i, r);
   }
 
-  // keep rest
-  memmove(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
+  memcpy(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
 }
 
 void __sha3_squeeze(sha3 sha3, const int r) {
@@ -241,8 +238,7 @@ const uint64_t* sha3_squeeze(sha3* sha3) {
     __sha3_sponge(*sha3, i, r);
   }
 
-  // keep rest
-  memmove(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
+  memcpy(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
 
   __sha3_squeeze(*sha3, r);
 
