@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "sha3.h"
 
@@ -233,23 +234,8 @@ void __sha3_sponge(sha3 sha3, const int r) {
   __sha3_keccak(sha3.S);
 }
 
-void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
-  // append to global thingy thing
-  __sha3_append_buf(sha3->buf, M, size);
-
-  // if long enough, perform sponging
-  const int c = 2 * sha3->d;
-  const int r = SHA3_B - c;
-  while(sha3->buf->count >= r / 8) {
-    __sha3_sponge(*sha3, r);
-
-    // keep rest
-    memcpy(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
-  }
-}
-
 void __sha3_pad(__sha3_da* da, const int x) {
-  const int bit_len = da->count * 8 - 6;
+  const int bit_len = da->count * 8 - 5;
   const int j = __sha3_mod(-bit_len - 2, x);
   const int p_len = (bit_len + j + 2) / 8;
 
@@ -257,6 +243,23 @@ void __sha3_pad(__sha3_da* da, const int x) {
 
   da->items[p_len - 1] |= 0b10000000;
   da->count = p_len;
+}
+
+
+void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
+  const int c = 2 * sha3->d;
+  const int r = SHA3_B - c;
+
+  // append to global thingy thing
+  __sha3_append_buf(sha3->buf, M, size);
+
+  // if long enough, perform sponging
+  while(sha3->buf->count >= r / 8) {
+    __sha3_sponge(*sha3, r);
+
+    // keep rest
+    memmove(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
+  }
 }
 
 void __sha3_squeeze(sha3 sha3, const int r) {
@@ -284,12 +287,13 @@ const uint64_t* sha3_squeeze(sha3* sha3) {
 
   __sha3_append(sha3->buf, 0b110);
 
+  memset(sha3->buf->items + sha3->buf->count, 0, sha3->buf->capacity - sha3->buf->count);
   __sha3_pad(sha3->buf, r);
 
   while(sha3->buf->count >= r / 8) {
     __sha3_sponge(*sha3, r);
 
-    memcpy(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
+    memmove(sha3->buf->items, sha3->buf->items + r / 8, (sha3->buf->count -= r / 8));
   }
 
   __sha3_squeeze(*sha3, r);
