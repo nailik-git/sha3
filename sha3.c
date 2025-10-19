@@ -2,6 +2,15 @@
 #include <string.h>
 #include "sha3.h"
 
+#if defined (__clang__)
+#define __SHA3_ROL64(num, count) __builtin_rotateleft64(num, count)
+#elif defined (__GNUC__)
+#define __SHA3_ROL64(num, count) __builtin_stdc_rotate_left(num, count)
+#else
+#define __SHA3_ROL64(num, count) (num = (num << (count % 64)) | (num >> ((-(unsigned int) count) % 64)))
+#endif
+
+
 #define SHA3_B 1600
 #define SHA3_W 64
 #define SHA3_L 6
@@ -47,7 +56,7 @@ static const int __sha3_mod5[] = {
   4, 0, 1, 2, 3, 4, 0, 1
 };
 
-#define SHA3_D(x) (SHA3_C(__sha3_mod5[x]) ^ __builtin_rotateleft64(SHA3_C(__sha3_mod5[x + 2]), 1))
+#define SHA3_D(x) (SHA3_C(__sha3_mod5[x]) ^ __SHA3_ROL64(SHA3_C(__sha3_mod5[x + 2]), 1))
 
 static const uint64_t __sha3_rc[] = {
   0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
@@ -73,7 +82,7 @@ static inline void __sha3_rnd(uint64_t* S, int i_r) {
   for(int t = 0; t < 24; t++) {
     const int x = __sha3_xy[t][0];
     const int y = __sha3_xy[t][1];
-    _S[x + 5 * y] = __builtin_rotateleft64(_S[x + 5 * y], __sha3_rot[t]);
+    _S[x + 5 * y] = __SHA3_ROL64(_S[x + 5 * y], __sha3_rot[t]);
   }
 
   // pi & chi
