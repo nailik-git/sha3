@@ -146,7 +146,7 @@ void __sha3_init(sha3* sha3, const int d) {
   memset(sha3->S, 0, 25 * sizeof(uint64_t));
 
   if(sha3->hash == NULL) sha3->hash = malloc(sha3->d / sizeof(uint64_t));
-  memset(sha3->S, 0, sha3->d / sizeof(uint64_t));
+  memset(sha3->hash, 0, sha3->d / sizeof(uint64_t));
 }
 
 void sha3_init_224(sha3* sha3) {
@@ -177,8 +177,8 @@ void sha3_deinit(sha3* sha3) {
   sha3->hash = NULL;
 }
 
-void __sha3_sponge(sha3 sha3, const int i, const int r) {
-  int p_idx = i * r / 8;
+void __sha3_sponge(sha3 sha3, const size_t i, const int r) {
+  size_t p_idx = i * r / 8;
   for(int j = 0; j < r / 64; j++) {
     for(int k = 0; k < 8; k++) {
       sha3.S[j] ^= ((uint64_t) sha3.buf->items[p_idx + k]) << (8 * k);
@@ -195,7 +195,7 @@ void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
 
   __sha3_append_buf(sha3->buf, M, size);
 
-  int i;
+  size_t i;
   for(i = 0; (i + 1) * r / 8 <= sha3->buf->count; i++) {
     __sha3_sponge(*sha3, i, r);
   }

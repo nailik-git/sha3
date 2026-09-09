@@ -11,7 +11,7 @@ $(BUILD)/libsha3.a: $(BUILD)/sha3.o
 	ar rsc $@ $<
 
 $(BUILD)/sha3.o: sha3.c sha3.h
-	cc -O3 -c -o $@ $< 
+	cc -O3 -g -c -o $@ $< 
 
 $(BUILD):
 	mkdir -p $(BUILD)
