@@ -71,7 +71,11 @@ static inline void __sha3_rnd(uint64_t* S, int i_r) {
   static uint64_t _S[25] = {0};
 
   // theta
+  #pragma GCC unroll 5
+  #pragma GCC ivdep
   for(int x = 0; x < 5; x++) {
+    #pragma GCC ivdep
+    #pragma GCC unroll 5
     for(int y = 0; y < 5; y++) {
       _S[x + 5 * y] = S[x + 5 * y] ^ SHA3_D(x);
     }
@@ -79,6 +83,8 @@ static inline void __sha3_rnd(uint64_t* S, int i_r) {
 
   // rho
   S[0] = _S[0];
+  #pragma GCC ivdep
+  #pragma GCC unroll 24
   for(int t = 0; t < 24; t++) {
     const int x = __sha3_xy[t][0];
     const int y = __sha3_xy[t][1];
@@ -86,7 +92,11 @@ static inline void __sha3_rnd(uint64_t* S, int i_r) {
   }
 
   // pi & chi
+  #pragma GCC novector
+  #pragma GCC unroll 5
   for(int x = 0; x < 5; x++) {
+    #pragma GCC novector
+    #pragma GCC unroll 5
     for(int y = 0; y < 5; y++) {
       const int m1 = __sha3_mod5[x + 2];
       const int m2 = __sha3_mod5[x + 3];
@@ -177,30 +187,27 @@ void sha3_deinit(sha3* sha3) {
   sha3->hash = NULL;
 }
 
-void __sha3_sponge(sha3 sha3, const size_t i, const int r) {
+void __sha3_sponge(sha3 sha3, const unsigned char* M, const size_t i, const int r) {
   size_t p_idx = i * r / 8;
   for(int j = 0; j < r / 64; j++) {
     for(int k = 0; k < 8; k++) {
-      sha3.S[j] ^= ((uint64_t) sha3.buf->items[p_idx + k]) << (8 * k);
+      sha3.S[j] ^= ((uint64_t) M[p_idx + k]) << (8 * k);
     }
     p_idx += 8;
   }
   __sha3_keccak(sha3.S);
 }
 
-
 void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
   const int c = 2 * sha3->d;
   const int r = SHA3_B - c;
 
-  __sha3_append_buf(sha3->buf, M, size);
-
   size_t i;
-  for(i = 0; (i + 1) * r / 8 <= sha3->buf->count; i++) {
-    __sha3_sponge(*sha3, i, r);
+  for(i = 0; (i + 1) * r / 8 <= size; i++) {
+    __sha3_sponge(*sha3, M, i, r);
   }
 
-  memcpy(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
+  __sha3_append_buf(sha3->buf, M + i * r / 8, size - i * r / 8);
 }
 
 void __sha3_squeeze(sha3 sha3, const int r) {
@@ -244,7 +251,7 @@ const uint64_t* sha3_squeeze(sha3* sha3) {
 
   size_t i;
   for(i = 0; (i + 1) * r / 8 <= sha3->buf->count; i++) {
-    __sha3_sponge(*sha3, i, r);
+    __sha3_sponge(*sha3, sha3->buf->items, i, r);
   }
 
   memcpy(sha3->buf->items, sha3->buf->items + i * r / 8, (sha3->buf->count -= i * r / 8));
