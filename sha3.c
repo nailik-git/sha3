@@ -225,7 +225,7 @@ void __sha3_squeeze(sha3 sha3, const int r) {
 void __sha3_pad(__sha3_da* da, const int x) {
   const int bit_len = da->count * 8 - 5;
   const int j = __sha3_mod(-bit_len - 2, x);
-  const int p_len = (bit_len + j + 2) / 8;
+  const unsigned int p_len = (bit_len + j + 2) / 8;
 
   if(da->capacity < p_len) da->items = realloc(da->items, (da->capacity *= 2));
 
@@ -242,7 +242,7 @@ const uint64_t* sha3_squeeze(sha3* sha3) {
   memset(sha3->buf->items + sha3->buf->count, 0, sha3->buf->capacity - sha3->buf->count);
   __sha3_pad(sha3->buf, r);
 
-  int i;
+  size_t i;
   for(i = 0; (i + 1) * r / 8 <= sha3->buf->count; i++) {
     __sha3_sponge(*sha3, i, r);
   }

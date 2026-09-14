@@ -6,8 +6,8 @@
 
 typedef struct {
   uint8_t* items;
-  int count;
-  int capacity;
+  size_t count;
+  size_t capacity;
 } __sha3_da;
 
 typedef struct {
