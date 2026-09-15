@@ -17,10 +17,7 @@ typedef struct {
   uint64_t* hash;
 } sha3;
 
-void sha3_init_224(sha3* sha3);
-void sha3_init_256(sha3* sha3);
-void sha3_init_384(sha3* sha3);
-void sha3_init_512(sha3* sha3);
+void sha3_init(sha3* sha3, const int hash_size);
 
 void sha3_deinit(sha3* sha3);
 

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include "sha3.h"
@@ -145,8 +146,10 @@ void __sha3_append_buf(__sha3_da* da, const uint8_t* buf, const int buf_len) {
   da->count += buf_len;
 }
 
-void __sha3_init(sha3* sha3, const int d) {
-  sha3->d = d;
+void sha3_init(sha3* sha3, const int hash_size) {
+  assert(hash_size == 224 || hash_size == 256 || hash_size == 384 || hash_size == 512);
+
+  sha3->d = hash_size;
 
   if(sha3->buf == NULL) sha3->buf = malloc(sizeof(__sha3_da));
   sha3->buf->count = 0;
@@ -157,22 +160,6 @@ void __sha3_init(sha3* sha3, const int d) {
 
   if(sha3->hash == NULL) sha3->hash = malloc(sha3->d / sizeof(uint64_t));
   memset(sha3->hash, 0, sha3->d / sizeof(uint64_t));
-}
-
-void sha3_init_224(sha3* sha3) {
-  __sha3_init(sha3, 224);
-}
-
-void sha3_init_256(sha3* sha3) {
-  __sha3_init(sha3, 256);
-}
-
-void sha3_init_384(sha3* sha3) {
-  __sha3_init(sha3, 384);
-}
-
-void sha3_init_512(sha3* sha3) {
-  __sha3_init(sha3, 512);
 }
 
 void sha3_deinit(sha3* sha3) {

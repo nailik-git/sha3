@@ -3,14 +3,11 @@
 #include <string.h>
 #include <stdio.h>
 
-#define concat2(a, b) a ## b
-#define concat(a, b) concat2(a, b)
-
 #define HASH_SIZE 256
 
 int main() {
   sha3 sha3 = {0};
-  concat(sha3_init_, HASH_SIZE)(&sha3); // trickery, expands to sha3_init_256(&sha3)
+  sha3_init(&sha3, HASH_SIZE);
 
   const char* m1 = "ab";
   const char* m2 = "c";
