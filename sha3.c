@@ -174,7 +174,7 @@ void sha3_deinit(sha3* sha3) {
   sha3->hash = NULL;
 }
 
-void __sha3_sponge(sha3 sha3, const unsigned char* M, const size_t i, const int r) {
+void __sha3_sponge(sha3 sha3, const uint8_t* M, const size_t i, const int r) {
   size_t p_idx = i * r / 8;
   for(int j = 0; j < r / 64; j++) {
     for(int k = 0; k < 8; k++) {
@@ -185,9 +185,18 @@ void __sha3_sponge(sha3 sha3, const unsigned char* M, const size_t i, const int 
   __sha3_keccak(sha3.S);
 }
 
-void sha3_sponge(sha3* sha3, const void* M, const size_t size) {
+void sha3_sponge(sha3* sha3, const void* M, size_t size) {
   const int c = 2 * sha3->d;
   const int r = SHA3_B - c;
+
+  if(sha3->buf->count > 0 && size > r / 8 - sha3->buf->count) {
+    const size_t shift = r / 8 - sha3->buf->count;
+    __sha3_append_buf(sha3->buf, M, shift);
+    __sha3_sponge(*sha3, sha3->buf->items, 0, r);
+    M += shift;
+    size -= shift;
+    sha3->buf->count = 0;
+  }
 
   size_t i;
   for(i = 0; (i + 1) * r / 8 <= size; i++) {
