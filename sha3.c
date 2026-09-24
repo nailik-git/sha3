@@ -237,7 +237,7 @@ static inline void __sha3_pad(__sha3_da* da, const int x) {
   da->count = p_len;
 }
 
-const uint64_t* sha3_squeeze(sha3* sha3) {
+const uint8_t* sha3_squeeze(sha3* sha3) {
   const int c = 2 * sha3->d;
   const int r = SHA3_B - c;
 
@@ -255,5 +255,5 @@ const uint64_t* sha3_squeeze(sha3* sha3) {
 
   __sha3_squeeze(*sha3, r);
 
-  return sha3->hash;
+  return (uint8_t*)sha3->hash;
 }
