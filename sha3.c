@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 #include "sha3.h"
 
 #if defined (__clang__)
@@ -69,7 +70,7 @@ static const uint64_t __sha3_rc[] = {
 };
 
 static inline void __sha3_rnd(uint64_t* S, int i_r) {
-  static uint64_t _S[25] = {0};
+  thread_local static uint64_t _S[25] = {0};
 
   // theta
   #pragma GCC unroll 5
@@ -113,13 +114,13 @@ static inline void __sha3_rnd(uint64_t* S, int i_r) {
   S[0] ^= __sha3_rc[i_r];
 }
 
-void __sha3_keccak(uint64_t* S) {
+static inline void __sha3_keccak(uint64_t* S) {
   for(int i = 12 + 2 * SHA3_L - SHA3_N_R; i < (12 + 2 * SHA3_L); i++) {
     __sha3_rnd(S, i);
   }
 }
 
-void __sha3_append(__sha3_da* da, const uint8_t item) {
+static inline void __sha3_append(__sha3_da* da, const uint8_t item) {
   if(!da->capacity) {
     da->items = malloc(1600);
     da->capacity = 1600;
@@ -132,7 +133,7 @@ void __sha3_append(__sha3_da* da, const uint8_t item) {
   da->items[da->count++] = item;
 }
 
-void __sha3_append_buf(__sha3_da* da, const uint8_t* buf, const int buf_len) {
+static inline void __sha3_append_buf(__sha3_da* da, const uint8_t* buf, const int buf_len) {
   if(!da->capacity) {
     da->items = malloc(1600);
     da->capacity = 1600;
@@ -174,7 +175,7 @@ void sha3_deinit(sha3* sha3) {
   sha3->hash = NULL;
 }
 
-void __sha3_sponge(sha3 sha3, const uint8_t* M, const size_t i, const int r) {
+static inline void __sha3_sponge(sha3 sha3, const uint8_t* M, const size_t i, const int r) {
   size_t p_idx = i * r / 8;
   for(int j = 0; j < r / 64; j++) {
     for(int k = 0; k < 8; k++) {
@@ -206,7 +207,7 @@ void sha3_sponge(sha3* sha3, const void* M, size_t size) {
   __sha3_append_buf(sha3->buf, M + i * r / 8, size - i * r / 8);
 }
 
-void __sha3_squeeze(sha3 sha3, const int r) {
+static inline void __sha3_squeeze(sha3 sha3, const int r) {
   int z_idx = 0;
 
   while(1) {
@@ -225,7 +226,7 @@ void __sha3_squeeze(sha3 sha3, const int r) {
   }
 }
 
-void __sha3_pad(__sha3_da* da, const int x) {
+static inline void __sha3_pad(__sha3_da* da, const int x) {
   const int bit_len = da->count * 8 - 5;
   const int j = __sha3_mod(-bit_len - 2, x);
   const unsigned int p_len = (bit_len + j + 2) / 8;
